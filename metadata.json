@@ -1,0 +1,9 @@
+{
+  "name": "EduPilot",
+  "description": "AI-powered study assistant for students and self-learners featuring AI tutoring, note generation, and study planning.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
