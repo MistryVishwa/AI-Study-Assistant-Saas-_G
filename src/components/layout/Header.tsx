@@ -27,13 +27,13 @@ export const Header: React.FC = () => {
         
         <div className="flex items-center gap-3 pl-6 border-l border-white/10">
           <div className="text-right">
-            <p className="text-sm font-semibold">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Student'}</p>
+            <p className="text-sm font-semibold">{user?.displayName || 'Student'}</p>
             <p className="text-xs text-white/40">{profile?.role === 'admin' ? 'Admin' : 'Premium Student'}</p>
           </div>
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gold to-edu-blue p-[2px]">
             <div className="w-full h-full rounded-full bg-edu-black flex items-center justify-center overflow-hidden">
-              {user?.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              {user?.photoURL ? (
+                <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               ) : (
                 <User size={20} className="text-white/60" />
               )}

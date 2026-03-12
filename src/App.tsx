@@ -21,11 +21,11 @@ import { ExtraTools } from './pages/ExtraTools';
 import { Support } from './pages/Support';
 import { motion, AnimatePresence } from 'motion/react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { AuthPage } from './pages/AuthPage';
+import { LogIn, Sparkles } from 'lucide-react';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { user, loading } = useAuth();
+  const { user, loading, signIn } = useAuth();
 
   if (loading) {
     return (
@@ -39,7 +39,31 @@ function AppContent() {
   }
 
   if (!user) {
-    return <AuthPage />;
+    return (
+      <div className="min-h-screen bg-edu-black flex items-center justify-center p-6">
+        <div className="max-w-md w-full glass p-12 rounded-[40px] text-center space-y-8 border-gold/20">
+          <div className="w-20 h-20 bg-gold/10 text-gold rounded-3xl flex items-center justify-center mx-auto rotate-12">
+            <Sparkles size={40} />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-gold to-gold-light bg-clip-text text-transparent">
+              EduPilot
+            </h1>
+            <p className="text-white/40">Your AI-Powered Study Companion</p>
+          </div>
+          <button 
+            onClick={signIn}
+            className="w-full btn-gold py-4 rounded-2xl flex items-center justify-center gap-3 text-lg"
+          >
+            <LogIn size={20} />
+            Continue with Google
+          </button>
+          <p className="text-xs text-white/20">
+            By continuing, you agree to EduPilot's Terms of Service and Privacy Policy.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const renderContent = () => {
