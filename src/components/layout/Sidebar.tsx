@@ -43,7 +43,7 @@ import { LifeBuoy, Sparkles } from 'lucide-react';
 import { useAuth } from '@/src/context/AuthContext';
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => {
-  const { logout } = useAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <aside className="w-64 h-screen glass border-r border-white/10 flex flex-col sticky top-0">
@@ -75,15 +75,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab }) => 
         ))}
       </nav>
 
-      <div className="p-4 border-t border-white/10">
-        <button 
-          onClick={logout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-400/10 transition-all"
-        >
-          <LogOut size={20} />
-          <span className="font-medium">Logout</span>
-        </button>
-      </div>
+      {user && (
+        <div className="p-4 border-t border-white/10">
+          <button 
+            onClick={signOut}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-400/10 transition-all"
+          >
+            <LogOut size={20} />
+            <span className="font-medium">Logout</span>
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

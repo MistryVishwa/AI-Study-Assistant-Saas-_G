@@ -8,9 +8,11 @@ interface AuthContextType {
   loading: boolean;
   profile: any | null;
   signInWithGoogle: () => Promise<void>;
-  signUp: (email: string, password: string) => Promise<any>;
+  signUp: (email: string, password: string, name: string, goal: string) => Promise<any>;
   signIn: (email: string, password: string) => Promise<any>;
-  logout: () => Promise<void>;
+  signOut: () => Promise<void>;
+  sendOTP: (email: string) => Promise<any>;
+  verifyOTP: (email: string, token: string, type: 'signup' | 'recovery' | 'email') => Promise<any>;
   resetPassword: (email: string) => Promise<any>;
 }
 
@@ -27,16 +29,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        ensureProfile(session.user);
+      }
       setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        await ensureProfile(session.user);
       } else {
         setProfile(null);
       }
@@ -46,18 +50,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const ensureProfile = async (user: User) => {
+    // First try to fetch
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', user.id)
       .single();
 
-    if (error) {
-      console.error('Error fetching profile:', error);
-      // If profile doesn't exist, we might want to create it, 
-      // but usually this is handled by a Supabase trigger on auth.users
-    } else {
+    if (error && error.code === 'PGRST116') {
+      // Profile doesn't exist, create it
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: user.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email?.split('@')[0],
+            learning_goal: user.user_metadata?.learning_goal || 'General Learning',
+          }
+        ])
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Error creating profile:', createError);
+      } else {
+        setProfile(newProfile);
+      }
+    } else if (data) {
       setProfile(data);
     }
   };
@@ -72,11 +93,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) throw error;
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name: string, goal: string) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        data: {
+          full_name: name,
+          learning_goal: goal,
+        },
         emailRedirectTo: window.location.origin
       }
     });
@@ -85,6 +110,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
+    // First check if user exists in profiles (as requested)
+    const { data: profileCheck, error: profileError } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (!profileCheck && !profileError) {
+      throw new Error('Email not registered. Please register first.');
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -93,9 +129,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return data;
   };
 
-  const logout = async () => {
+  const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+  };
+
+  const sendOTP = async (email: string) => {
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const verifyOTP = async (email: string, token: string, type: 'signup' | 'recovery' | 'email') => {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type,
+    });
+    if (error) throw error;
+    return data;
   };
 
   const resetPassword = async (email: string) => {
@@ -115,7 +172,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       signInWithGoogle, 
       signUp, 
       signIn, 
-      logout, 
+      signOut, 
+      sendOTP,
+      verifyOTP,
       resetPassword 
     }}>
       {children}
